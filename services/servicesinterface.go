@@ -9,3 +9,7 @@ type UserService interface {
 	UpdateUser(*models.User) error
 	DeleteUser(*string) error
 }
+
+type SchemaService interface {
+	// product methods
+}
