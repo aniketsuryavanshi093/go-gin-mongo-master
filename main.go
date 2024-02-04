@@ -29,7 +29,7 @@ var (
 func init() {
 	ctx = context.TODO()
 
-	mongoconn := options.Client().ApplyURI("mongodb://localhost:27017")
+	mongoconn := options.Client().ApplyURI("mongodb+srv://aniketsuryavanshi093:kMsaFYSHPe1MU1Bl@golangpractise.fy4qwfr.mongodb.net/")
 	mongoclient, err = mongo.Connect(ctx, mongoconn)
 	if err != nil {
 		log.Fatal("error while connecting with mongo", err)

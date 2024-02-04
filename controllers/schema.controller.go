@@ -17,7 +17,7 @@ func CreateSchemaController(schemaService services.SchemaService) SchemaControll
 }
 
 func (sc *SchemaController) RegisterSchemaRoutes(rg *gin.RouterGroup) {
-	_schemaroute := rg.Group("/schema")
+	// _schemaroute := rg.Group("/schema")
 	// userroute.POST("/create", uc.CreateUser)
 	// userroute.GET("/get/:name", uc.GetUser)
 	// userroute.GET("/getall", uc.GetAll)

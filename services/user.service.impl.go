@@ -3,8 +3,11 @@ package services
 import (
 	"context"
 	"errors"
+	"gojinmongo/helpers"
 	"gojinmongo/models"
+	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -22,8 +25,22 @@ func NewUserService(usercollection *mongo.Collection, ctx context.Context) UserS
 	}
 }
 
-func (u *UserServiceImpl) CreateUser(user *models.User) error {
-	_, err := u.usercollection.InsertOne(u.ctx, user)
+func (u *UserServiceImpl) CreateUser(ctx *gin.Context, user *models.User) error {
+	var tempuser *models.User
+	u.usercollection.FindOne(u.ctx, bson.M{"email": user.Email}).Decode(&tempuser)
+	if tempuser != nil {
+		appErr := &AppError{400, "User already exists"}
+		ctx.Error(appErr)
+		return appErr
+	}
+	res, err := u.usercollection.InsertOne(u.ctx, user)
+	tokenString := helpers.GenerateToken(user)
+	user.ID = res.InsertedID.(primitive.ObjectID)
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "User created",
+		"token":   tokenString,
+		"data":    user,
+	})
 	return err
 }
 

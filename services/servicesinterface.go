@@ -1,9 +1,13 @@
 package services
 
-import "gojinmongo/models"
+import (
+	"gojinmongo/models"
+
+	"github.com/gin-gonic/gin"
+)
 
 type UserService interface {
-	CreateUser(*models.User) error
+	CreateUser(*gin.Context, *models.User) error
 	GetUser(*string) (*models.User, error)
 	GetAll() ([]*models.User, error)
 	UpdateUser(*models.User) error
