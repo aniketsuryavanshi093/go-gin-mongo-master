@@ -13,24 +13,23 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-/*
-@Author: DevProblems(Sarang Kumar)
-@YTChannel: https://www.youtube.com/channel/UCVno4tMHEXietE3aUTodaZQ
-*/
 var (
-	server      *gin.Engine
-	us          services.UserService
-	uc          controllers.UserController
-	ctx         context.Context
-	userc       *mongo.Collection
-	mongoclient *mongo.Client
-	err         error
+	server           *gin.Engine
+	userservice      services.UserService
+	schemaservice    services.SchemaService
+	usercontrollers  controllers.UserController
+	schemacontroller controllers.SchemaController
+	ctx              context.Context
+	schemac          *mongo.Collection
+	userc            *mongo.Collection
+	mongoclient      *mongo.Client
+	err              error
 )
 
 func init() {
 	ctx = context.TODO()
 
-	mongoconn := options.Client().ApplyURI("mongodb://localhost:27017")
+	mongoconn := options.Client().ApplyURI("mongodb+srv://aniketsuryavanshi093:kMsaFYSHPe1MU1Bl@golangpractise.fy4qwfr.mongodb.net/")
 	mongoclient, err = mongo.Connect(ctx, mongoconn)
 	if err != nil {
 		log.Fatal("error while connecting with mongo", err)
@@ -42,18 +41,26 @@ func init() {
 
 	fmt.Println("mongo connection established")
 
+	// user initiation
 	userc = mongoclient.Database("userdb").Collection("users")
-	us = services.NewUserService(userc, ctx)
-	uc = controllers.New(us)
+	userservice = services.NewUserService(userc, ctx)
+	usercontrollers = controllers.New(userservice)
+
+	// user schemas initiation
+	schemac = mongoclient.Database("userdb").Collection("schemas")
+	schemaservice = services.NewSchemaService(schemac, ctx)
+	schemacontroller = controllers.CreateSchemaController(schemaservice)
+
+	// assigning servers to global variable
 	server = gin.Default()
 }
 
 func main() {
 	defer mongoclient.Disconnect(ctx)
-
 	basepath := server.Group("/v1")
-	uc.RegisterUserRoutes(basepath)
-
+	// routes for user
+	usercontrollers.RegisterUserRoutes(basepath)
+	// routes for user schemas
+	schemacontroller.RegisterSchemaRoutes(basepath)
 	log.Fatal(server.Run(":9090"))
-
 }

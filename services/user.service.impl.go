@@ -3,11 +3,15 @@ package services
 import (
 	"context"
 	"errors"
+	"gojinmongo/helpers"
 	"gojinmongo/models"
+	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserServiceImpl struct {
@@ -22,9 +26,51 @@ func NewUserService(usercollection *mongo.Collection, ctx context.Context) UserS
 	}
 }
 
-func (u *UserServiceImpl) CreateUser(user *models.User) error {
-	_, err := u.usercollection.InsertOne(u.ctx, user)
+func (u *UserServiceImpl) CreateUser(ctx *gin.Context, user *models.User) error {
+	var tempuser *models.User
+	u.usercollection.FindOne(u.ctx, bson.M{"email": user.Email}).Decode(&tempuser)
+	if tempuser != nil {
+		appErr := &AppError{400, "User already exists"}
+		ctx.Error(appErr)
+		return appErr
+	}
+	hashedPassword, err := helpers.HashPassword(user.Password)
+	user.Password = hashedPassword
+	res, err := u.usercollection.InsertOne(u.ctx, user)
+	tokenString := helpers.GenerateToken(user)
+	user.Password = ""
+	user.ID = res.InsertedID.(primitive.ObjectID)
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "User created",
+		"token":   tokenString,
+		"data":    user,
+	})
 	return err
+}
+func (u *UserServiceImpl) LoginUser(ctx *gin.Context, user *models.User) (*models.UserResponse, error) {
+	var tempuser *models.User
+	err := u.usercollection.FindOne(u.ctx, bson.M{"email": user.Email}).Decode(&tempuser)
+	if tempuser == nil {
+		appErr := &AppError{400, "User does not exist"}
+		ctx.Error(appErr)
+		return nil, appErr
+	}
+	if err != nil {
+		return nil, err
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(tempuser.Password), []byte(user.Password))
+	if err != nil {
+		appErr := &AppError{400, "Incorrect password"}
+		ctx.Error(appErr)
+		return nil, appErr
+	}
+	tokenString := helpers.GenerateToken(user)
+	user.Password = ""
+	userResponse := &models.UserResponse{
+		User:  user,
+		Token: tokenString,
+	}
+	return userResponse, nil
 }
 
 func (u *UserServiceImpl) GetUser(name *string) (*models.User, error) {
@@ -63,7 +109,7 @@ func (u *UserServiceImpl) GetAll() ([]*models.User, error) {
 
 func (u *UserServiceImpl) UpdateUser(user *models.User) error {
 	filter := bson.D{primitive.E{Key: "name", Value: user.Name}}
-	update := bson.D{primitive.E{Key: "$set", Value: bson.D{primitive.E{Key: "name", Value: user.Name}, primitive.E{Key: "age", Value: user.Age}, primitive.E{Key: "address", Value: user.Address}}}}
+	update := bson.D{primitive.E{Key: "$set", Value: bson.D{primitive.E{Key: "name", Value: user.Name}, primitive.E{Key: "age"}}}}
 	result, _ := u.usercollection.UpdateOne(u.ctx, filter, update)
 	if result.MatchedCount != 1 {
 		return errors.New("no matched document found for update")
