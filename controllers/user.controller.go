@@ -32,6 +32,21 @@ func (uc *UserController) CreateUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
 }
 
+func (uc *UserController) LoginUser(ctx *gin.Context) {
+	var user models.User
+	if err := ctx.ShouldBindJSON(&user); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+	userResponse, err := uc.UserService.LoginUser(ctx, &user)
+
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "User Login successfully", "data": userResponse})
+}
+
 func (uc *UserController) GetUser(ctx *gin.Context) {
 	var username string = ctx.Param("name")
 	user, err := uc.UserService.GetUser(&username)
@@ -78,6 +93,7 @@ func (uc *UserController) DeleteUser(ctx *gin.Context) {
 func (uc *UserController) RegisterUserRoutes(rg *gin.RouterGroup) {
 	userroute := rg.Group("/user")
 	userroute.POST("/create", uc.CreateUser)
+	userroute.POST("/login", uc.LoginUser)
 	userroute.GET("/get/:name", uc.GetUser)
 	userroute.GET("/getall", uc.GetAll)
 	userroute.PATCH("/update", uc.UpdateUser)

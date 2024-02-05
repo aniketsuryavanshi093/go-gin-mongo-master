@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserServiceImpl struct {
@@ -33,8 +34,11 @@ func (u *UserServiceImpl) CreateUser(ctx *gin.Context, user *models.User) error 
 		ctx.Error(appErr)
 		return appErr
 	}
+	hashedPassword, err := helpers.HashPassword(user.Password)
+	user.Password = hashedPassword
 	res, err := u.usercollection.InsertOne(u.ctx, user)
 	tokenString := helpers.GenerateToken(user)
+	user.Password = ""
 	user.ID = res.InsertedID.(primitive.ObjectID)
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "User created",
@@ -42,6 +46,31 @@ func (u *UserServiceImpl) CreateUser(ctx *gin.Context, user *models.User) error 
 		"data":    user,
 	})
 	return err
+}
+func (u *UserServiceImpl) LoginUser(ctx *gin.Context, user *models.User) (*models.UserResponse, error) {
+	var tempuser *models.User
+	err := u.usercollection.FindOne(u.ctx, bson.M{"email": user.Email}).Decode(&tempuser)
+	if tempuser == nil {
+		appErr := &AppError{400, "User does not exist"}
+		ctx.Error(appErr)
+		return nil, appErr
+	}
+	if err != nil {
+		return nil, err
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(tempuser.Password), []byte(user.Password))
+	if err != nil {
+		appErr := &AppError{400, "Incorrect password"}
+		ctx.Error(appErr)
+		return nil, appErr
+	}
+	tokenString := helpers.GenerateToken(user)
+	user.Password = ""
+	userResponse := &models.UserResponse{
+		User:  user,
+		Token: tokenString,
+	}
+	return userResponse, nil
 }
 
 func (u *UserServiceImpl) GetUser(name *string) (*models.User, error) {

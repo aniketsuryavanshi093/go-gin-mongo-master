@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func GenerateToken(user *models.User) string {
@@ -21,4 +22,18 @@ func GenerateToken(user *models.User) string {
 	tokenString, _ := token.SignedString([]byte("secret"))
 
 	return tokenString
+}
+
+func HashPassword(password string) (string, error) {
+
+	// Generate a salt
+	salt := bcrypt.DefaultCost
+
+	// Hash the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), salt)
+	if err != nil {
+		return "", err
+	}
+
+	return string(hashedPassword), nil
 }
