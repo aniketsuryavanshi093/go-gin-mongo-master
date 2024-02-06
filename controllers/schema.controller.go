@@ -1,7 +1,10 @@
 package controllers
 
 import (
+	"gojinmongo/helpers"
+	"gojinmongo/models"
 	"gojinmongo/services"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,10 +18,19 @@ func CreateSchemaController(schemaService services.SchemaService) SchemaControll
 		SchemaService: schemaService,
 	}
 }
+func (sc *SchemaController) CreateSchema(ctx *gin.Context) {
+	userID := ctx.MustGet("user_id").(string)
+	var schema *models.Schema
+	if err := ctx.ShouldBindJSON(&schema); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+	sc.SchemaService.CreateSchema(ctx, schema, userID)
 
+}
 func (sc *SchemaController) RegisterSchemaRoutes(rg *gin.RouterGroup) {
-	// _schemaroute := rg.Group("/schema")
-	// userroute.POST("/create", uc.CreateUser)
+	_schemaroute := rg.Group("/schema")
+	_schemaroute.POST("/create", helpers.AuthMiddleware(), sc.CreateSchema)
 	// userroute.GET("/get/:name", uc.GetUser)
 	// userroute.GET("/getall", uc.GetAll)
 	// userroute.PATCH("/update", uc.UpdateUser)

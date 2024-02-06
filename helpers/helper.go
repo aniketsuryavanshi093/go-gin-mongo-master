@@ -1,9 +1,12 @@
 package helpers
 
 import (
+	"fmt"
 	"gojinmongo/models"
+	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -23,7 +26,26 @@ func GenerateToken(user *models.User) string {
 
 	return tokenString
 }
-
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString := c.GetHeader("Authorization")
+		token, _ := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			// Don't forget to validate the alg is what you expect:
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("Unexpected signing method")
+			}
+			return []byte("secret"), nil
+		})
+		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			// Get user ID from claims
+			userID := claims["user_id"].(string)
+			c.Set("user_id", userID)
+			c.Next()
+		} else {
+			c.AbortWithStatus(http.StatusUnauthorized)
+		}
+	}
+}
 func HashPassword(password string) (string, error) {
 
 	// Generate a salt
