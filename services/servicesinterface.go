@@ -17,4 +17,5 @@ type UserService interface {
 
 type SchemaService interface {
 	// product methods
+	CreateSchema(*gin.Context, *models.Schema, string)
 }

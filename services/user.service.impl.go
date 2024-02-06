@@ -25,7 +25,6 @@ func NewUserService(usercollection *mongo.Collection, ctx context.Context) UserS
 		ctx:            ctx,
 	}
 }
-
 func (u *UserServiceImpl) CreateUser(ctx *gin.Context, user *models.User) error {
 	var tempuser *models.User
 	u.usercollection.FindOne(u.ctx, bson.M{"email": user.Email}).Decode(&tempuser)
@@ -35,8 +34,22 @@ func (u *UserServiceImpl) CreateUser(ctx *gin.Context, user *models.User) error 
 		return appErr
 	}
 	hashedPassword, err := helpers.HashPassword(user.Password)
+	if err != nil {
+		// Handle error
+		return err
+	}
 	user.Password = hashedPassword
+
+	if user.Schemas == nil {
+		user.Schemas = []primitive.ObjectID{}
+	}
+
 	res, err := u.usercollection.InsertOne(u.ctx, user)
+	if err != nil {
+		// Handle error
+		return err
+	}
+
 	tokenString := helpers.GenerateToken(user)
 	user.Password = ""
 	user.ID = res.InsertedID.(primitive.ObjectID)
@@ -45,8 +58,9 @@ func (u *UserServiceImpl) CreateUser(ctx *gin.Context, user *models.User) error 
 		"token":   tokenString,
 		"data":    user,
 	})
-	return err
+	return nil
 }
+
 func (u *UserServiceImpl) LoginUser(ctx *gin.Context, user *models.User) (*models.UserResponse, error) {
 	var tempuser *models.User
 	err := u.usercollection.FindOne(u.ctx, bson.M{"email": user.Email}).Decode(&tempuser)
@@ -64,8 +78,9 @@ func (u *UserServiceImpl) LoginUser(ctx *gin.Context, user *models.User) (*model
 		ctx.Error(appErr)
 		return nil, appErr
 	}
-	tokenString := helpers.GenerateToken(user)
+	user.ID = tempuser.ID
 	user.Password = ""
+	tokenString := helpers.GenerateToken(user)
 	userResponse := &models.UserResponse{
 		User:  user,
 		Token: tokenString,
