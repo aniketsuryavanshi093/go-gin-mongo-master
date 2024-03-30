@@ -201,3 +201,17 @@ func (u *UserServiceImpl) CreateFolder(ctx *gin.Context, folder *models.Folder, 
 
 	return nil
 }
+
+func (u *UserServiceImpl) DeleteFolder(ctx *gin.Context, folderId string, userId string) error {
+	userObjectID, _ := primitive.ObjectIDFromHex(userId)
+	folderid, _ := primitive.ObjectIDFromHex(folderId)
+	filter := bson.M{"_id": userObjectID, "folders._id": folderid}
+	update := bson.M{"$pull": bson.M{"folders": bson.M{"_id": folderid}}}
+	_, err := u.usercollection.UpdateOne(u.ctx, filter, update)
+	if err != nil {
+		appErr := &AppError{400, err.Error()}
+		ctx.Error(appErr)
+		return appErr
+	}
+	return nil
+}

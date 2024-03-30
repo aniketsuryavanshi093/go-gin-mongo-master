@@ -13,6 +13,7 @@ type UserService interface {
 	GetAll() ([]*models.User, error)
 	GetFolders(*gin.Context, *string) ([]models.Folder, error)
 	CreateFolder(*gin.Context, *models.Folder, *string) error
+	DeleteFolder(*gin.Context, string, string) error
 	UpdateUser(*models.User) error
 	DeleteUser(*string) error
 }
@@ -20,4 +21,6 @@ type UserService interface {
 type SchemaService interface {
 	// product methods
 	CreateSchema(*gin.Context, *models.Schema, string) (*models.SchemaResponse, error)
+	AddSchematoFolder(*gin.Context, string, string, string) error
+	DeleteSchema(*gin.Context, string, string) error
 }
