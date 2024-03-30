@@ -25,8 +25,12 @@ func (sc *SchemaController) CreateSchema(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
-	sc.SchemaService.CreateSchema(ctx, schema, userID)
-
+	schemaresponse, err := sc.SchemaService.CreateSchema(ctx, schema, userID)
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "User Schema created successfully!", "data": schemaresponse})
 }
 func (sc *SchemaController) RegisterSchemaRoutes(rg *gin.RouterGroup) {
 	_schemaroute := rg.Group("/schema")

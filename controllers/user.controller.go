@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"fmt"
+	"gojinmongo/helpers"
 	"gojinmongo/models"
 	"gojinmongo/services"
 	"net/http"
@@ -90,11 +92,40 @@ func (uc *UserController) DeleteUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "success"})
 }
 
+func (uc *UserController) getFolders(ctx *gin.Context) {
+	var userId = ctx.MustGet("user_id").(string)
+	fmt.Print("user id: ", userId)
+
+	folders, err := uc.UserService.GetFolders(ctx, &userId)
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "success", "data": folders})
+}
+
+func (uc *UserController) createFolder(ctx *gin.Context) {
+	var userId = ctx.MustGet("user_id").(string)
+	var folder models.Folder
+	if err := ctx.ShouldBindJSON(&folder); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+	err := uc.UserService.CreateFolder(ctx, &folder, &userId)
+
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": " folder created successfully!", "data": folder})
+}
 func (uc *UserController) RegisterUserRoutes(rg *gin.RouterGroup) {
 	userroute := rg.Group("/user")
 	userroute.POST("/create", uc.CreateUser)
 	userroute.POST("/login", uc.LoginUser)
 	userroute.GET("/get/:name", uc.GetUser)
+	userroute.GET("/folder", helpers.AuthMiddleware(), uc.getFolders)
+	userroute.POST("/folder", helpers.AuthMiddleware(), uc.createFolder)
 	userroute.GET("/getall", uc.GetAll)
 	userroute.PATCH("/update", uc.UpdateUser)
 	userroute.DELETE("/delete/:name", uc.DeleteUser)

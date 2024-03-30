@@ -50,7 +50,6 @@ func init() {
 	schemac = mongoclient.Database("userdb").Collection("schemas")
 	schemaservice = services.NewSchemaService(schemac, userc, ctx)
 	schemacontroller = controllers.CreateSchemaController(schemaservice)
-
 	// assigning servers to global variable
 	server = gin.Default()
 }
