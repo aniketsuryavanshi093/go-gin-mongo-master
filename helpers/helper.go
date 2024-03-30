@@ -29,15 +29,24 @@ func GenerateToken(user *models.User) string {
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString := c.GetHeader("Authorization")
-		token, _ := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			// Don't forget to validate the alg is what you expect:
+		if tokenString == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "No auth token provided"})
+			return
+		}
+
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("Unexpected signing method")
 			}
 			return []byte("secret"), nil
 		})
+
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			return
+		}
+
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			// Get user ID from claims
 			userID := claims["user_id"].(string)
 			c.Set("user_id", userID)
 			c.Next()
@@ -46,6 +55,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 	}
 }
+
 func HashPassword(password string) (string, error) {
 
 	// Generate a salt

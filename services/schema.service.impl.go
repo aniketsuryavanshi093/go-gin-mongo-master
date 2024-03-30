@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gojinmongo/models"
-	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -26,9 +26,11 @@ func NewSchemaService(schemacollection *mongo.Collection, userCollection *mongo.
 	}
 }
 
-func (s *SchemaServiceImpl) CreateSchema(ctx *gin.Context, schema *models.Schema, userID string) {
+func (s *SchemaServiceImpl) CreateSchema(ctx *gin.Context, schema *models.Schema, userID string) (*models.SchemaResponse, error) {
 	userid, _ := primitive.ObjectIDFromHex(userID)
 	schema.User = userid
+	fmt.Print("userid", userid)
+	schema.CreatedAt = primitive.NewDateTimeFromTime(time.Now())
 	fmt.Println(userID)
 	fmt.Println(userid)
 	fmt.Println(schema)
@@ -36,20 +38,21 @@ func (s *SchemaServiceImpl) CreateSchema(ctx *gin.Context, schema *models.Schema
 	if err != nil {
 		appErr := &AppError{400, err.Error()}
 		ctx.Error(appErr)
-		return
+		return nil, appErr
 	}
 	schemaID := res.InsertedID.(primitive.ObjectID)
 	// Update user's schema array
 	filter := bson.M{"_id": userid}
 	update := bson.M{"$push": bson.M{"schemas": schemaID}}
-	upres, err := s.userCollection.UpdateOne(s.ctx, filter, update)
+	_, err = s.userCollection.UpdateOne(s.ctx, filter, update)
+	schema.ID = schemaID
 	if err != nil {
 		appErr := &AppError{400, err.Error()}
 		ctx.Error(appErr)
-		return
+		return nil, appErr
 	}
-	fmt.Println(upres, filter)
-	ctx.JSON(http.StatusOK, gin.H{
-		"message": "user schema updated",
-	})
+	userResponse := &models.SchemaResponse{
+		Schema: schema,
+	}
+	return userResponse, nil
 }

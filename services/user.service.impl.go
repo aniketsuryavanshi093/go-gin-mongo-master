@@ -3,9 +3,11 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"gojinmongo/helpers"
 	"gojinmongo/models"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -44,6 +46,11 @@ func (u *UserServiceImpl) CreateUser(ctx *gin.Context, user *models.User) error 
 		user.Schemas = []primitive.ObjectID{}
 	}
 
+	if user.Folders == nil {
+		user.Folders = []models.Folder{}
+	}
+
+	user.CreatedAt = primitive.NewDateTimeFromTime(time.Now())
 	res, err := u.usercollection.InsertOne(u.ctx, user)
 	if err != nil {
 		// Handle error
@@ -63,7 +70,8 @@ func (u *UserServiceImpl) CreateUser(ctx *gin.Context, user *models.User) error 
 
 func (u *UserServiceImpl) LoginUser(ctx *gin.Context, user *models.User) (*models.UserResponse, error) {
 	var tempuser *models.User
-	err := u.usercollection.FindOne(u.ctx, bson.M{"email": user.Email}).Decode(&tempuser)
+	query := bson.D{bson.E{Key: "email", Value: user.Email}}
+	err := u.usercollection.FindOne(u.ctx, query).Decode(&tempuser)
 	if tempuser == nil {
 		appErr := &AppError{400, "User does not exist"}
 		ctx.Error(appErr)
@@ -78,11 +86,11 @@ func (u *UserServiceImpl) LoginUser(ctx *gin.Context, user *models.User) (*model
 		ctx.Error(appErr)
 		return nil, appErr
 	}
-	user.ID = tempuser.ID
-	user.Password = ""
-	tokenString := helpers.GenerateToken(user)
+
+	tempuser.Password = ""
+	tokenString := helpers.GenerateToken(tempuser)
 	userResponse := &models.UserResponse{
-		User:  user,
+		User:  tempuser,
 		Token: tokenString,
 	}
 	return userResponse, nil
@@ -138,5 +146,58 @@ func (u *UserServiceImpl) DeleteUser(name *string) error {
 	if result.DeletedCount != 1 {
 		return errors.New("no matched document found for delete")
 	}
+	return nil
+}
+
+func (u *UserServiceImpl) GetFolders(ctx *gin.Context, userid *string) ([]models.Folder, error) {
+	var folders []models.Folder
+	// for _, id := range user.Folders {
+	// 	var folder models.Folder
+	// 	err := u.usercollection.FindOne(u.ctx, bson.M{"_id": id}).Decode(&folder)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	folders = append(folders, folder)
+	// }
+	var user *models.User
+	userObjectID, err := primitive.ObjectIDFromHex(*userid)
+	if err != nil {
+		appErr := &AppError{400, "Invalid user ID"}
+		ctx.Error(appErr)
+		return nil, appErr
+	}
+	u.usercollection.FindOne(u.ctx, bson.M{"_id": userObjectID}).Decode(&user)
+	fmt.Print(user)
+	if user == nil {
+		appErr := &AppError{400, "User does not exist"}
+		ctx.Error(appErr)
+		return nil, appErr
+	}
+	for _, folder := range user.Folders {
+		folders = append(folders, folder)
+	}
+
+	return folders, nil
+}
+
+func (u *UserServiceImpl) CreateFolder(ctx *gin.Context, folder *models.Folder, userid *string) error {
+	folder.CreatedAt = primitive.NewDateTimeFromTime(time.Now())
+	folder.ID = primitive.NewObjectID()
+	folder.SchemaIds = []primitive.ObjectID{}
+	userObjectID, err := primitive.ObjectIDFromHex(*userid)
+	if err != nil {
+		appErr := &AppError{400, "Invalid user ID"}
+		ctx.Error(appErr)
+		return appErr
+	}
+
+	update := bson.M{"$push": bson.M{"folders": folder}}
+	_, err = u.usercollection.UpdateByID(u.ctx, userObjectID, update)
+	if err != nil {
+		appErr := &AppError{400, err.Error()}
+		ctx.Error(appErr)
+		return appErr
+	}
+
 	return nil
 }
