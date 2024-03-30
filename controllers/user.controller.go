@@ -119,6 +119,18 @@ func (uc *UserController) createFolder(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": " folder created successfully!", "data": folder})
 }
+func (uc *UserController) DeleteFolder(ctx *gin.Context) {
+	var userId = ctx.MustGet("user_id").(string)
+	folderid := ctx.Param("id")
+
+	err := uc.UserService.DeleteFolder(ctx, folderid, userId)
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": " folder Deleted successfully!"})
+}
+
 func (uc *UserController) RegisterUserRoutes(rg *gin.RouterGroup) {
 	userroute := rg.Group("/user")
 	userroute.POST("/create", uc.CreateUser)
@@ -129,4 +141,5 @@ func (uc *UserController) RegisterUserRoutes(rg *gin.RouterGroup) {
 	userroute.GET("/getall", uc.GetAll)
 	userroute.PATCH("/update", uc.UpdateUser)
 	userroute.DELETE("/delete/:name", uc.DeleteUser)
+	userroute.DELETE("/deletefolder/:id", helpers.AuthMiddleware(), uc.DeleteFolder)
 }
