@@ -31,7 +31,7 @@ func (u *UserServiceImpl) CreateUser(ctx *gin.Context, user *models.User) error 
 	var tempuser *models.User
 	u.usercollection.FindOne(u.ctx, bson.M{"email": user.Email}).Decode(&tempuser)
 	if tempuser != nil {
-		appErr := &AppError{400, "User already exists"}
+		appErr := &AppError{400, "User already exists", true}
 		ctx.Error(appErr)
 		return appErr
 	}
@@ -73,7 +73,7 @@ func (u *UserServiceImpl) LoginUser(ctx *gin.Context, user *models.User) (*model
 	query := bson.D{bson.E{Key: "email", Value: user.Email}}
 	err := u.usercollection.FindOne(u.ctx, query).Decode(&tempuser)
 	if tempuser == nil {
-		appErr := &AppError{400, "User does not exist"}
+		appErr := &AppError{400, "User does not exist", true}
 		ctx.Error(appErr)
 		return nil, appErr
 	}
@@ -82,7 +82,7 @@ func (u *UserServiceImpl) LoginUser(ctx *gin.Context, user *models.User) (*model
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(tempuser.Password), []byte(user.Password))
 	if err != nil {
-		appErr := &AppError{400, "Incorrect password"}
+		appErr := &AppError{400, "Incorrect password", true}
 		ctx.Error(appErr)
 		return nil, appErr
 	}
@@ -162,14 +162,14 @@ func (u *UserServiceImpl) GetFolders(ctx *gin.Context, userid *string) ([]models
 	var user *models.User
 	userObjectID, err := primitive.ObjectIDFromHex(*userid)
 	if err != nil {
-		appErr := &AppError{400, "Invalid user ID"}
+		appErr := &AppError{400, "Invalid user ID", true}
 		ctx.Error(appErr)
 		return nil, appErr
 	}
 	u.usercollection.FindOne(u.ctx, bson.M{"_id": userObjectID}).Decode(&user)
 	fmt.Print(user)
 	if user == nil {
-		appErr := &AppError{400, "User does not exist"}
+		appErr := &AppError{400, "User does not exist", true}
 		ctx.Error(appErr)
 		return nil, appErr
 	}
@@ -186,7 +186,7 @@ func (u *UserServiceImpl) CreateFolder(ctx *gin.Context, folder *models.Folder, 
 	folder.SchemaIds = []primitive.ObjectID{}
 	userObjectID, err := primitive.ObjectIDFromHex(*userid)
 	if err != nil {
-		appErr := &AppError{400, "Invalid user ID"}
+		appErr := &AppError{400, "Invalid user ID", true}
 		ctx.Error(appErr)
 		return appErr
 	}
@@ -194,7 +194,7 @@ func (u *UserServiceImpl) CreateFolder(ctx *gin.Context, folder *models.Folder, 
 	update := bson.M{"$push": bson.M{"folders": folder}}
 	_, err = u.usercollection.UpdateByID(u.ctx, userObjectID, update)
 	if err != nil {
-		appErr := &AppError{400, err.Error()}
+		appErr := &AppError{400, err.Error(), true}
 		ctx.Error(appErr)
 		return appErr
 	}
@@ -209,7 +209,7 @@ func (u *UserServiceImpl) DeleteFolder(ctx *gin.Context, folderId string, userId
 	update := bson.M{"$pull": bson.M{"folders": bson.M{"_id": folderid}}}
 	_, err := u.usercollection.UpdateOne(u.ctx, filter, update)
 	if err != nil {
-		appErr := &AppError{400, err.Error()}
+		appErr := &AppError{400, err.Error(), true}
 		ctx.Error(appErr)
 		return appErr
 	}

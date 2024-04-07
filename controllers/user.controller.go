@@ -31,19 +31,18 @@ func (uc *UserController) CreateUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
 }
 
 func (uc *UserController) LoginUser(ctx *gin.Context) {
 	var user models.User
 	if err := ctx.ShouldBindJSON(&user); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error(), "isError": true})
 		return
 	}
 	userResponse, err := uc.UserService.LoginUser(ctx, &user)
 
 	if err != nil {
-		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error(), "isError": true})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "User Login successfully", "data": userResponse})
