@@ -36,7 +36,7 @@ func (s *SchemaServiceImpl) CreateSchema(ctx *gin.Context, schema *models.Schema
 	fmt.Println(schema)
 	res, err := s.schemacollection.InsertOne(s.ctx, schema)
 	if err != nil {
-		appErr := &AppError{400, err.Error()}
+		appErr := &AppError{400, err.Error(), true}
 		ctx.Error(appErr)
 		return nil, appErr
 	}
@@ -47,7 +47,7 @@ func (s *SchemaServiceImpl) CreateSchema(ctx *gin.Context, schema *models.Schema
 	_, err = s.userCollection.UpdateOne(s.ctx, filter, update)
 	schema.ID = schemaID
 	if err != nil {
-		appErr := &AppError{400, err.Error()}
+		appErr := &AppError{400, err.Error(), true}
 		ctx.Error(appErr)
 		return nil, appErr
 	}
@@ -65,7 +65,7 @@ func (s *SchemaServiceImpl) AddSchematoFolder(context *gin.Context, folderId str
 	update := bson.M{"$addToSet": bson.M{"folders.$.schemaIds": schemaid}}
 	_, err := s.userCollection.UpdateOne(s.ctx, filter, update)
 	if err != nil {
-		appErr := &AppError{400, err.Error()}
+		appErr := &AppError{400, err.Error(), true}
 		context.Error(appErr)
 		return appErr
 	}
@@ -78,12 +78,12 @@ func (s *SchemaServiceImpl) DeleteSchema(context *gin.Context, schemaId string, 
 	_, err := s.schemacollection.DeleteOne(s.ctx, bson.M{"_id": schemaid})
 	_, updateerr := s.userCollection.UpdateByID(s.ctx, userid, bson.M{"$pull": bson.M{"schemas": schemaid}})
 	if updateerr != nil {
-		appErr := &AppError{400, updateerr.Error()}
+		appErr := &AppError{400, updateerr.Error(), true}
 		context.Error(appErr)
 		return appErr
 	}
 	if err != nil {
-		appErr := &AppError{400, err.Error()}
+		appErr := &AppError{400, err.Error(), true}
 		context.Error(appErr)
 		return appErr
 	}
