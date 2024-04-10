@@ -7,6 +7,7 @@ import (
 	"gojinmongo/services"
 	"log"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -51,12 +52,30 @@ func init() {
 	schemaservice = services.NewSchemaService(schemac, userc, ctx)
 	schemacontroller = controllers.CreateSchemaController(schemaservice)
 	// assigning servers to global variable
-	server = gin.Default()
+
 }
 
 func main() {
 	defer mongoclient.Disconnect(ctx)
+	server = gin.Default()
+
+	server.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"content-type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * 60 * 60, // Maximum value not ignored by any of major browsers
+	}))
 	basepath := server.Group("/v1")
+
+	server.OPTIONS("/v1/*any", func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Credentials", "true")
+		c.Header("Access-Control-Allow-Headers", "content-type, Authorization")
+		c.Header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
+		c.AbortWithStatus(204)
+	})
 	// routes for user
 	usercontrollers.RegisterUserRoutes(basepath)
 	// routes for user schemas

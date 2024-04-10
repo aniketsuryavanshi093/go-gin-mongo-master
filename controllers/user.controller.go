@@ -135,7 +135,7 @@ func (uc *UserController) RegisterUserRoutes(rg *gin.RouterGroup) {
 	userroute.POST("/create", uc.CreateUser)
 	userroute.POST("/login", uc.LoginUser)
 	userroute.GET("/get/:name", uc.GetUser)
-	userroute.GET("/folder", helpers.AuthMiddleware(), uc.getFolders)
+	userroute.GET("/folders", helpers.AuthMiddleware(), uc.getFolders)
 	userroute.POST("/folder", helpers.AuthMiddleware(), uc.createFolder)
 	userroute.GET("/getall", uc.GetAll)
 	userroute.PATCH("/update", uc.UpdateUser)
