@@ -48,7 +48,14 @@ func (sc *SchemaController) AddSchematoFolder(ctx *gin.Context) {
 
 	schemaId := requestBody.SchemaId
 	folderId := requestBody.FolderId
-
+	if folderId == "" {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Invalid Folder id", "isError": true})
+		return
+	}
+	if schemaId == "" {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Invalid Schema id", "isError": true})
+		return
+	}
 	err := sc.SchemaService.AddSchematoFolder(ctx, folderId, schemaId, userID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})

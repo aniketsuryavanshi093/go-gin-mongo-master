@@ -98,7 +98,8 @@ func (u *UserServiceImpl) LoginUser(ctx *gin.Context, user *models.User) (*model
 
 func (u *UserServiceImpl) GetUser(name *string) (*models.User, error) {
 	var user *models.User
-	query := bson.D{bson.E{Key: "name", Value: name}}
+	userObjectID, _ := primitive.ObjectIDFromHex(*name)
+	query := bson.D{bson.E{Key: "_id", Value: userObjectID}}
 	err := u.usercollection.FindOne(u.ctx, query).Decode(&user)
 	return user, err
 }
@@ -151,14 +152,6 @@ func (u *UserServiceImpl) DeleteUser(name *string) error {
 
 func (u *UserServiceImpl) GetFolders(ctx *gin.Context, userid *string) ([]models.Folder, error) {
 	var folders []models.Folder
-	// for _, id := range user.Folders {
-	// 	var folder models.Folder
-	// 	err := u.usercollection.FindOne(u.ctx, bson.M{"_id": id}).Decode(&folder)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	folders = append(folders, folder)
-	// }
 	var user *models.User
 	userObjectID, err := primitive.ObjectIDFromHex(*userid)
 	if err != nil {
@@ -214,4 +207,27 @@ func (u *UserServiceImpl) DeleteFolder(ctx *gin.Context, folderId string, userId
 		return appErr
 	}
 	return nil
+}
+
+func (u *UserServiceImpl) GetFolderdetails(ctx *gin.Context, folderId string, userId string) error {
+	var folders []models.Folder
+	var user *models.User
+	userObjectID, err := primitive.ObjectIDFromHex(*userid)
+	if err != nil {
+		appErr := &AppError{400, "Invalid user ID", true}
+		ctx.Error(appErr)
+		return nil, appErr
+	}
+	u.usercollection.FindOne(u.ctx, bson.M{"_id": userObjectID}).Decode(&user)
+	fmt.Print(user)
+	if user == nil {
+		appErr := &AppError{400, "User does not exist", true}
+		ctx.Error(appErr)
+		return nil, appErr
+	}
+	for _, folder := range user.Folders {
+		folders = append(folders, folder)
+	}
+
+	return folders, nil
 }

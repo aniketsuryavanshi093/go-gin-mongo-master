@@ -11,6 +11,7 @@ type UserService interface {
 	LoginUser(*gin.Context, *models.User) (*models.UserResponse, error)
 	GetUser(*string) (*models.User, error)
 	GetAll() ([]*models.User, error)
+	GetFolderdetails(*gin.Context, string, string) (*models.Folder, error)
 	GetFolders(*gin.Context, *string) ([]models.Folder, error)
 	CreateFolder(*gin.Context, *models.Folder, *string) error
 	DeleteFolder(*gin.Context, string, string) error
