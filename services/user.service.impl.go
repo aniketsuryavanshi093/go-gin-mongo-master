@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"errors"
-	"fmt"
 	"gojinmongo/helpers"
 	"gojinmongo/models"
 	"net/http"
@@ -160,7 +159,6 @@ func (u *UserServiceImpl) GetFolders(ctx *gin.Context, userid *string) ([]models
 		return nil, appErr
 	}
 	u.usercollection.FindOne(u.ctx, bson.M{"_id": userObjectID}).Decode(&user)
-	fmt.Print(user)
 	if user == nil {
 		appErr := &AppError{400, "User does not exist", true}
 		ctx.Error(appErr)
@@ -209,25 +207,115 @@ func (u *UserServiceImpl) DeleteFolder(ctx *gin.Context, folderId string, userId
 	return nil
 }
 
-func (u *UserServiceImpl) GetFolderdetails(ctx *gin.Context, folderId string, userId string) error {
-	var folders []models.Folder
-	var user *models.User
-	userObjectID, err := primitive.ObjectIDFromHex(*userid)
+func (u *UserServiceImpl) GetFolderdetails(ctx *gin.Context, folderId string, userId string) ([]bson.M, error) {
+	userObjectID, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
-		appErr := &AppError{400, "Invalid user ID", true}
-		ctx.Error(appErr)
-		return nil, appErr
+		return nil, err
 	}
-	u.usercollection.FindOne(u.ctx, bson.M{"_id": userObjectID}).Decode(&user)
-	fmt.Print(user)
-	if user == nil {
-		appErr := &AppError{400, "User does not exist", true}
-		ctx.Error(appErr)
-		return nil, appErr
-	}
-	for _, folder := range user.Folders {
-		folders = append(folders, folder)
+	folderObjectID, err := primitive.ObjectIDFromHex(folderId)
+	if err != nil {
+		return nil, err
 	}
 
-	return folders, nil
+	// Match user and folder
+	// Match user and folder
+	matchStage := bson.D{
+		{Key: "$match", Value: bson.D{
+			{Key: "_id", Value: userObjectID},
+			{Key: "folders._id", Value: folderObjectID},
+		}},
+	}
+
+	// Unwind folders array
+	unwindStage := bson.D{
+		{Key: "$unwind", Value: bson.D{
+			{Key: "path", Value: "$folders"},
+			{Key: "preserveNullAndEmptyArrays", Value: true},
+		}},
+	}
+
+	// Match the folder
+	folderMatchStage := bson.D{
+		{Key: "$match", Value: bson.D{
+			{Key: "folders._id", Value: folderObjectID},
+		}},
+	}
+
+	// Lookup schemas
+	lookupStage := bson.D{
+		{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "schemas"},
+			{Key: "localField", Value: "folders.schemaIds"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "schemas"},
+		}},
+	}
+
+	// Reshape result
+	projectStage := bson.D{
+		{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 0},
+			{Key: "folder", Value: "$folders"},
+			{Key: "schemas", Value: 1},
+		}},
+	}
+
+	pipeline := mongo.Pipeline{
+		matchStage,
+		unwindStage,
+		folderMatchStage,
+		lookupStage,
+		projectStage,
+	}
+
+	cursor, err := u.usercollection.Aggregate(ctx, pipeline)
+
+	var results []bson.M
+
+	if err = cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+func (u *UserServiceImpl) GetUserDaigrams(ctx *gin.Context, userId string) ([]bson.M, error) {
+	userID, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return nil, err
+	}
+
+	// Match user
+	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "_id", Value: userID}}}}
+
+	// Lookup schemas
+	lookupStage := bson.D{{Key: "$lookup", Value: bson.D{
+		{Key: "from", Value: "schemas"},
+		{Key: "localField", Value: "schemas"},
+		{Key: "foreignField", Value: "_id"},
+		{Key: "as", Value: "schemas"},
+	}}}
+
+	// Reshape result
+	projectStage := bson.D{{Key: "$project", Value: bson.D{
+		{Key: "_id", Value: 0},
+		{Key: "schemas", Value: "$schemas"},
+	}}}
+
+	cursor, err := u.usercollection.Aggregate(ctx, mongo.Pipeline{
+		matchStage,
+		lookupStage,
+		projectStage,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var results []bson.M
+	if err = cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }

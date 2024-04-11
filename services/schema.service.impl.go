@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"gojinmongo/models"
 	"time"
 
@@ -29,11 +28,7 @@ func NewSchemaService(schemacollection *mongo.Collection, userCollection *mongo.
 func (s *SchemaServiceImpl) CreateSchema(ctx *gin.Context, schema *models.Schema, userID string) (*models.SchemaResponse, error) {
 	userid, _ := primitive.ObjectIDFromHex(userID)
 	schema.User = userid
-	fmt.Print("userid", userid)
 	schema.CreatedAt = primitive.NewDateTimeFromTime(time.Now())
-	fmt.Println(userID)
-	fmt.Println(userid)
-	fmt.Println(schema)
 	res, err := s.schemacollection.InsertOne(s.ctx, schema)
 	if err != nil {
 		appErr := &AppError{400, err.Error(), true}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"gojinmongo/controllers"
 	"gojinmongo/services"
 	"log"
@@ -39,8 +38,6 @@ func init() {
 	if err != nil {
 		log.Fatal("error while trying to ping mongo", err)
 	}
-
-	fmt.Println("mongo connection established")
 
 	// user initiation
 	userc = mongoclient.Database("userdb").Collection("users")

@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"gojinmongo/helpers"
 	"gojinmongo/models"
 	"gojinmongo/services"
@@ -93,7 +92,6 @@ func (uc *UserController) DeleteUser(ctx *gin.Context) {
 
 func (uc *UserController) getFolders(ctx *gin.Context) {
 	var userId = ctx.MustGet("user_id").(string)
-	fmt.Print("user id: ", userId)
 
 	folders, err := uc.UserService.GetFolders(ctx, &userId)
 	if err != nil {
@@ -139,7 +137,18 @@ func (uc *UserController) getFolderdetails(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": " folder Deleted successfully!", folder: folder})
+	ctx.JSON(http.StatusOK, gin.H{"message": " folder Fetched successfully!", "folder": folder})
+}
+
+func (uc *UserController) GetUserDaigrams(ctx *gin.Context) {
+	var userId = ctx.MustGet("user_id").(string)
+
+	daigrams, err := uc.UserService.GetUserDaigrams(ctx, userId)
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": " daigrams Fetched successfully!", "data": daigrams})
 }
 
 func (uc *UserController) RegisterUserRoutes(rg *gin.RouterGroup) {
@@ -147,6 +156,7 @@ func (uc *UserController) RegisterUserRoutes(rg *gin.RouterGroup) {
 	userroute.POST("/create", uc.CreateUser)
 	userroute.POST("/login", uc.LoginUser)
 	userroute.GET("/get", helpers.AuthMiddleware(), uc.GetUser)
+	userroute.GET("/getdaigrams", helpers.AuthMiddleware(), uc.GetUserDaigrams)
 	userroute.GET("/folders", helpers.AuthMiddleware(), uc.getFolders)
 	userroute.GET("/folder/:id", helpers.AuthMiddleware(), uc.getFolderdetails)
 	userroute.POST("/folder", helpers.AuthMiddleware(), uc.createFolder)
