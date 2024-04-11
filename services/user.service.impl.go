@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"errors"
-	"fmt"
 	"gojinmongo/helpers"
 	"gojinmongo/models"
 	"net/http"
@@ -98,7 +97,8 @@ func (u *UserServiceImpl) LoginUser(ctx *gin.Context, user *models.User) (*model
 
 func (u *UserServiceImpl) GetUser(name *string) (*models.User, error) {
 	var user *models.User
-	query := bson.D{bson.E{Key: "name", Value: name}}
+	userObjectID, _ := primitive.ObjectIDFromHex(*name)
+	query := bson.D{bson.E{Key: "_id", Value: userObjectID}}
 	err := u.usercollection.FindOne(u.ctx, query).Decode(&user)
 	return user, err
 }
@@ -151,14 +151,6 @@ func (u *UserServiceImpl) DeleteUser(name *string) error {
 
 func (u *UserServiceImpl) GetFolders(ctx *gin.Context, userid *string) ([]models.Folder, error) {
 	var folders []models.Folder
-	// for _, id := range user.Folders {
-	// 	var folder models.Folder
-	// 	err := u.usercollection.FindOne(u.ctx, bson.M{"_id": id}).Decode(&folder)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	folders = append(folders, folder)
-	// }
 	var user *models.User
 	userObjectID, err := primitive.ObjectIDFromHex(*userid)
 	if err != nil {
@@ -167,7 +159,6 @@ func (u *UserServiceImpl) GetFolders(ctx *gin.Context, userid *string) ([]models
 		return nil, appErr
 	}
 	u.usercollection.FindOne(u.ctx, bson.M{"_id": userObjectID}).Decode(&user)
-	fmt.Print(user)
 	if user == nil {
 		appErr := &AppError{400, "User does not exist", true}
 		ctx.Error(appErr)
@@ -214,4 +205,117 @@ func (u *UserServiceImpl) DeleteFolder(ctx *gin.Context, folderId string, userId
 		return appErr
 	}
 	return nil
+}
+
+func (u *UserServiceImpl) GetFolderdetails(ctx *gin.Context, folderId string, userId string) ([]bson.M, error) {
+	userObjectID, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return nil, err
+	}
+	folderObjectID, err := primitive.ObjectIDFromHex(folderId)
+	if err != nil {
+		return nil, err
+	}
+
+	// Match user and folder
+	// Match user and folder
+	matchStage := bson.D{
+		{Key: "$match", Value: bson.D{
+			{Key: "_id", Value: userObjectID},
+			{Key: "folders._id", Value: folderObjectID},
+		}},
+	}
+
+	// Unwind folders array
+	unwindStage := bson.D{
+		{Key: "$unwind", Value: bson.D{
+			{Key: "path", Value: "$folders"},
+			{Key: "preserveNullAndEmptyArrays", Value: true},
+		}},
+	}
+
+	// Match the folder
+	folderMatchStage := bson.D{
+		{Key: "$match", Value: bson.D{
+			{Key: "folders._id", Value: folderObjectID},
+		}},
+	}
+
+	// Lookup schemas
+	lookupStage := bson.D{
+		{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "schemas"},
+			{Key: "localField", Value: "folders.schemaIds"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "schemas"},
+		}},
+	}
+
+	// Reshape result
+	projectStage := bson.D{
+		{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 0},
+			{Key: "folder", Value: "$folders"},
+			{Key: "schemas", Value: 1},
+		}},
+	}
+
+	pipeline := mongo.Pipeline{
+		matchStage,
+		unwindStage,
+		folderMatchStage,
+		lookupStage,
+		projectStage,
+	}
+
+	cursor, err := u.usercollection.Aggregate(ctx, pipeline)
+
+	var results []bson.M
+
+	if err = cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+func (u *UserServiceImpl) GetUserDaigrams(ctx *gin.Context, userId string) ([]bson.M, error) {
+	userID, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return nil, err
+	}
+
+	// Match user
+	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "_id", Value: userID}}}}
+
+	// Lookup schemas
+	lookupStage := bson.D{{Key: "$lookup", Value: bson.D{
+		{Key: "from", Value: "schemas"},
+		{Key: "localField", Value: "schemas"},
+		{Key: "foreignField", Value: "_id"},
+		{Key: "as", Value: "schemas"},
+	}}}
+
+	// Reshape result
+	projectStage := bson.D{{Key: "$project", Value: bson.D{
+		{Key: "_id", Value: 0},
+		{Key: "schemas", Value: "$schemas"},
+	}}}
+
+	cursor, err := u.usercollection.Aggregate(ctx, mongo.Pipeline{
+		matchStage,
+		lookupStage,
+		projectStage,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var results []bson.M
+	if err = cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }

@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"gojinmongo/helpers"
 	"gojinmongo/models"
 	"gojinmongo/services"
@@ -49,8 +48,8 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 }
 
 func (uc *UserController) GetUser(ctx *gin.Context) {
-	var username string = ctx.Param("name")
-	user, err := uc.UserService.GetUser(&username)
+	var userId = ctx.MustGet("user_id").(string)
+	user, err := uc.UserService.GetUser(&userId)
 	if err != nil {
 		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
 		return
@@ -93,7 +92,6 @@ func (uc *UserController) DeleteUser(ctx *gin.Context) {
 
 func (uc *UserController) getFolders(ctx *gin.Context) {
 	var userId = ctx.MustGet("user_id").(string)
-	fmt.Print("user id: ", userId)
 
 	folders, err := uc.UserService.GetFolders(ctx, &userId)
 	if err != nil {
@@ -130,12 +128,37 @@ func (uc *UserController) DeleteFolder(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": " folder Deleted successfully!"})
 }
 
+func (uc *UserController) getFolderdetails(ctx *gin.Context) {
+	var userId = ctx.MustGet("user_id").(string)
+	folderid := ctx.Param("id")
+
+	folder, err := uc.UserService.GetFolderdetails(ctx, folderid, userId)
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": " folder Fetched successfully!", "folder": folder})
+}
+
+func (uc *UserController) GetUserDaigrams(ctx *gin.Context) {
+	var userId = ctx.MustGet("user_id").(string)
+
+	daigrams, err := uc.UserService.GetUserDaigrams(ctx, userId)
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": " daigrams Fetched successfully!", "data": daigrams})
+}
+
 func (uc *UserController) RegisterUserRoutes(rg *gin.RouterGroup) {
 	userroute := rg.Group("/user")
 	userroute.POST("/create", uc.CreateUser)
 	userroute.POST("/login", uc.LoginUser)
-	userroute.GET("/get/:name", uc.GetUser)
+	userroute.GET("/get", helpers.AuthMiddleware(), uc.GetUser)
+	userroute.GET("/getdaigrams", helpers.AuthMiddleware(), uc.GetUserDaigrams)
 	userroute.GET("/folders", helpers.AuthMiddleware(), uc.getFolders)
+	userroute.GET("/folder/:id", helpers.AuthMiddleware(), uc.getFolderdetails)
 	userroute.POST("/folder", helpers.AuthMiddleware(), uc.createFolder)
 	userroute.GET("/getall", uc.GetAll)
 	userroute.PATCH("/update", uc.UpdateUser)

@@ -4,6 +4,7 @@ import (
 	"gojinmongo/models"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type UserService interface {
@@ -11,6 +12,8 @@ type UserService interface {
 	LoginUser(*gin.Context, *models.User) (*models.UserResponse, error)
 	GetUser(*string) (*models.User, error)
 	GetAll() ([]*models.User, error)
+	GetUserDaigrams(*gin.Context, string) ([]bson.M, error)
+	GetFolderdetails(*gin.Context, string, string) ([]bson.M, error)
 	GetFolders(*gin.Context, *string) ([]models.Folder, error)
 	CreateFolder(*gin.Context, *models.Folder, *string) error
 	DeleteFolder(*gin.Context, string, string) error
