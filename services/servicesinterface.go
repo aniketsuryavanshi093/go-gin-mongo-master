@@ -23,6 +23,7 @@ type UserService interface {
 
 type SchemaService interface {
 	// product methods
+	GetSchema(*gin.Context, string) (*models.SchemaResponse, error)
 	CreateSchema(*gin.Context, *models.Schema, string) (*models.SchemaResponse, error)
 	AddSchematoFolder(*gin.Context, string, string, string) error
 	DeleteSchema(*gin.Context, string, string) error

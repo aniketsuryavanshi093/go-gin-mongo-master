@@ -22,12 +22,12 @@ func New(userservice services.UserService) UserController {
 func (uc *UserController) CreateUser(ctx *gin.Context) {
 	var user models.User
 	if err := ctx.ShouldBindJSON(&user); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error(), "isError": true})
 		return
 	}
 	err := uc.UserService.CreateUser(ctx, &user)
 	if err != nil {
-		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error(), "isError": true})
 		return
 	}
 }
