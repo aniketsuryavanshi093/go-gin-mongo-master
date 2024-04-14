@@ -100,3 +100,22 @@ func (s *SchemaServiceImpl) GetSchema(context *gin.Context, schemaId string) (*m
 	}
 	return tempschemares, nil
 }
+
+func (s *SchemaServiceImpl) UpdateSchema(context *gin.Context, schemaId string, schema models.Schema) error {
+	schemaid, _ := primitive.ObjectIDFromHex(schemaId)
+	var tempschema *models.Schema
+
+	filter := bson.M{"_id": schemaid}
+	update := bson.M{"$set": bson.M{
+		"tablesdata":      schema.Tablesdata,
+		"tablesrelations": schema.Tablesrelations,
+		// Add more fields as needed
+	}}
+	err := s.schemacollection.FindOneAndUpdate(s.ctx, filter, update).Decode(&tempschema)
+	if err != nil {
+		appErr := &AppError{400, err.Error(), true}
+		context.Error(appErr)
+		return appErr
+	}
+	return nil
+}

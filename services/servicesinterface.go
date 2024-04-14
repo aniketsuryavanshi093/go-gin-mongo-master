@@ -27,4 +27,5 @@ type SchemaService interface {
 	CreateSchema(*gin.Context, *models.Schema, string) (*models.SchemaResponse, error)
 	AddSchematoFolder(*gin.Context, string, string, string) error
 	DeleteSchema(*gin.Context, string, string) error
+	UpdateSchema(*gin.Context, string, models.Schema) error
 }
