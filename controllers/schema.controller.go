@@ -68,7 +68,7 @@ func (sc *SchemaController) DeleteSchema(ctx *gin.Context) {
 	userID := ctx.MustGet("user_id").(string)
 	schemaid := ctx.Param("id")
 	if schemaid == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Schema ID is required"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Schema ID is required", "isError": true})
 		return
 	}
 	err := sc.SchemaService.DeleteSchema(ctx, schemaid, userID)
@@ -79,11 +79,25 @@ func (sc *SchemaController) DeleteSchema(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Schema deleted successfully!"})
 }
 
+func (sc *SchemaController) GetSchema(ctx *gin.Context) {
+	schemaid := ctx.Param("id")
+	if schemaid == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Schema ID is required", "isError": true})
+		return
+	}
+	schema, err := sc.SchemaService.GetSchema(ctx, schemaid)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "Schema deleted successfully!", "data": schema})
+}
+
 func (sc *SchemaController) RegisterSchemaRoutes(rg *gin.RouterGroup) {
 	_schemaroute := rg.Group("/schema")
 	_schemaroute.POST("/create", helpers.AuthMiddleware(), sc.CreateSchema)
 	_schemaroute.POST("/addfolder", helpers.AuthMiddleware(), sc.AddSchematoFolder)
-	// userroute.GET("/get/:name", uc.GetUser)
+	_schemaroute.GET("/get/:id", helpers.AuthMiddleware(), sc.GetSchema)
 	// userroute.GET("/getall", uc.GetAll)
 	// userroute.PATCH("/update", uc.UpdateUser)
 	_schemaroute.DELETE("/delete/:id", helpers.AuthMiddleware(), sc.DeleteSchema)

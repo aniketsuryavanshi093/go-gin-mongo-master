@@ -84,3 +84,19 @@ func (s *SchemaServiceImpl) DeleteSchema(context *gin.Context, schemaId string, 
 	}
 	return nil
 }
+
+func (s *SchemaServiceImpl) GetSchema(context *gin.Context, schemaId string) (*models.SchemaResponse, error) {
+	schemaid, _ := primitive.ObjectIDFromHex(schemaId)
+	var tempschema *models.Schema
+
+	err := s.schemacollection.FindOne(s.ctx, bson.M{"_id": schemaid}).Decode(&tempschema)
+	if err != nil {
+		appErr := &AppError{400, err.Error(), true}
+		context.Error(appErr)
+		return nil, appErr
+	}
+	tempschemares := &models.SchemaResponse{
+		Schema: tempschema,
+	}
+	return tempschemares, nil
+}
