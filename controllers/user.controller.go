@@ -142,8 +142,13 @@ func (uc *UserController) getFolderdetails(ctx *gin.Context) {
 
 func (uc *UserController) GetUserDaigrams(ctx *gin.Context) {
 	var userId = ctx.MustGet("user_id").(string)
-
-	daigrams, err := uc.UserService.GetUserDaigrams(ctx, userId)
+	type filter struct {
+		sortby string
+	}
+	queryfilter := &filter{
+		sortby: ctx.Query("sortby"),
+	}
+	daigrams, err := uc.UserService.GetUserDaigrams(ctx, userId, queryfilter.sortby)
 	if err != nil {
 		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
 		return

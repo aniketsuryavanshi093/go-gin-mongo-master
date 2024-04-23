@@ -278,8 +278,7 @@ func (u *UserServiceImpl) GetFolderdetails(ctx *gin.Context, folderId string, us
 
 	return results, nil
 }
-
-func (u *UserServiceImpl) GetUserDaigrams(ctx *gin.Context, userId string) ([]bson.M, error) {
+func (u *UserServiceImpl) GetUserDaigrams(ctx *gin.Context, userId string, filter string) ([]bson.M, error) {
 	userID, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
 		return nil, err
@@ -296,6 +295,26 @@ func (u *UserServiceImpl) GetUserDaigrams(ctx *gin.Context, userId string) ([]bs
 		{Key: "as", Value: "schemas"},
 	}}}
 
+	var unwindStage, sortStage, groupStage bson.D
+	switch filter {
+	case "Alphabetical":
+		unwindStage = bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$schemas"}}}}
+		sortStage = bson.D{{Key: "$sort", Value: bson.D{{Key: "schemas.title", Value: 1}}}}
+		groupStage = bson.D{{Key: "$group", Value: bson.D{{Key: "_id", Value: "$_id"}, {Key: "schemas", Value: bson.D{{Key: "$push", Value: "$schemas"}}}}}}
+	case "LastUpdatedAt":
+		unwindStage = bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$schemas"}}}}
+		sortStage = bson.D{{Key: "$sort", Value: bson.D{{Key: "schemas.updatedAt", Value: -1}}}}
+		groupStage = bson.D{{Key: "$group", Value: bson.D{{Key: "_id", Value: "$_id"}, {Key: "schemas", Value: bson.D{{Key: "$push", Value: "$schemas"}}}}}}
+	case "LastCreatedAt":
+		unwindStage = bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$schemas"}}}}
+		sortStage = bson.D{{Key: "$sort", Value: bson.D{{Key: "schemas.createdAt", Value: -1}}}}
+		groupStage = bson.D{{Key: "$group", Value: bson.D{{Key: "_id", Value: "$_id"}, {Key: "schemas", Value: bson.D{{Key: "$push", Value: "$schemas"}}}}}}
+	default:
+		unwindStage = bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$schemas"}}}}
+		sortStage = bson.D{{Key: "$sort", Value: bson.D{{Key: "schemas.title", Value: 1}}}}
+		groupStage = bson.D{{Key: "$group", Value: bson.D{{Key: "_id", Value: "$_id"}, {Key: "schemas", Value: bson.D{{Key: "$push", Value: "$schemas"}}}}}}
+	}
+
 	// Reshape result
 	projectStage := bson.D{{Key: "$project", Value: bson.D{
 		{Key: "_id", Value: 0},
@@ -305,9 +324,11 @@ func (u *UserServiceImpl) GetUserDaigrams(ctx *gin.Context, userId string) ([]bs
 	cursor, err := u.usercollection.Aggregate(ctx, mongo.Pipeline{
 		matchStage,
 		lookupStage,
+		unwindStage,
+		sortStage,
+		groupStage,
 		projectStage,
 	})
-
 	if err != nil {
 		return nil, err
 	}
