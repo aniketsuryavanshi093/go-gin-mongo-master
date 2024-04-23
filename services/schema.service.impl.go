@@ -29,6 +29,7 @@ func (s *SchemaServiceImpl) CreateSchema(ctx *gin.Context, schema *models.Schema
 	userid, _ := primitive.ObjectIDFromHex(userID)
 	schema.User = userid
 	schema.CreatedAt = primitive.NewDateTimeFromTime(time.Now())
+	schema.UpdatedAt = primitive.NewDateTimeFromTime(time.Now())
 	res, err := s.schemacollection.InsertOne(s.ctx, schema)
 	if err != nil {
 		appErr := &AppError{400, err.Error(), true}
@@ -104,11 +105,11 @@ func (s *SchemaServiceImpl) GetSchema(context *gin.Context, schemaId string) (*m
 func (s *SchemaServiceImpl) UpdateSchema(context *gin.Context, schemaId string, schema models.Schema) error {
 	schemaid, _ := primitive.ObjectIDFromHex(schemaId)
 	var tempschema *models.Schema
-
 	filter := bson.M{"_id": schemaid}
 	update := bson.M{"$set": bson.M{
 		"tablesdata":      schema.Tablesdata,
 		"tablesrelations": schema.Tablesrelations,
+		"updatedAt":       primitive.NewDateTimeFromTime(time.Now()),
 		// Add more fields as needed
 	}}
 	err := s.schemacollection.FindOneAndUpdate(s.ctx, filter, update).Decode(&tempschema)
