@@ -129,7 +129,7 @@ func (sc *SchemaController) RegisterSchemaRoutes(rg *gin.RouterGroup) {
 	_schemaroute := rg.Group("/schema")
 	_schemaroute.POST("/create", helpers.AuthMiddleware(), sc.CreateSchema)
 	_schemaroute.POST("/addfolder", helpers.AuthMiddleware(), sc.AddSchematoFolder)
-	_schemaroute.GET("/get/:id", helpers.AuthMiddleware(), sc.GetSchema)
+	_schemaroute.GET("/get/:id", sc.GetSchema)
 	// userroute.GET("/getall", uc.GetAll)
 	_schemaroute.POST("/update/:id", sc.UpdateSchema)
 	_schemaroute.DELETE("/delete/:id", helpers.AuthMiddleware(), sc.DeleteSchema)
